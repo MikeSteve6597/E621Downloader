@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+
+# 本地配置与日志（包含 API Key，切勿提交）
+userdata.json
+*.log
+
+# 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 发布产物按需手动上传到 GitHub Releases；
+# 若不想把 exe 纳入 Git 历史，取消下一行注释。
+# release/*.exe
