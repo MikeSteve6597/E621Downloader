@@ -1,6 +1,6 @@
-<p align="center"><img src="icon.png" width="112" alt="E6Dler 图标"></p>
+<p align="center"><img src="icon.png" width="112" alt="E621Downloader 图标"></p>
 
-<h1 align="center">E6Dler</h1>
+<h1 align="center">E621Downloader</h1>
 
 <p align="center">
   e621 图片浏览与批量下载工具 · Windows Fluent Design 桌面客户端
@@ -13,7 +13,7 @@
 
 ## 简介
 
-E6Dler 是一个基于 Python + PySide6 构建的 Windows 桌面客户端，用于浏览 e621 作品、按标签批量搜索下载，并管理收藏与黑名单。界面遵循 Windows 11 Fluent Design 设计语言，支持 Mica 云母材质、深色/浅色主题与高 DPI 缩放。
+E621Downloader 是一个基于 Python + PySide6 构建的 Windows 桌面客户端，用于浏览 e621 作品、按标签批量搜索下载，并管理收藏与黑名单。界面遵循 Windows 11 Fluent Design 设计语言，支持 Mica 云母材质、深色/浅色主题与高 DPI 缩放。
 
 程序以**单文件 exe** 形式发布，目标电脑无需安装 Python 或任何运行库，复制后双击即可启动。
 
@@ -73,10 +73,10 @@ E6Dler 是一个基于 Python + PySide6 构建的 Windows 桌面客户端，用�
 
 | 内容 | 位置 |
 | --- | --- |
-| 配置、账号、黑名单、搜索历史 | `%USERPROFILE%\E6Dler\userdata.json` |
+| 配置、账号、黑名单、搜索历史 | `%USERPROFILE%\E621Downloader\userdata.json` |
 | 默认下载目录 | `%USERPROFILE%\Downloads\E6dl` |
 | 下载去重记录 | 下载目录下的 `downloaded_md5.txt` |
-| 错误日志 | `%LOCALAPPDATA%\E6Dler\e6dler-error.log` |
+| 错误日志 | `%LOCALAPPDATA%\E621Downloader\E621Downloader-error.log` |
 
 - 所有数据仅保存在本机，程序不包含遥测、统计或任何上传行为。
 - **API Key 以明文形式保存在本机配置文件中**，请勿分享 `userdata.json`，也不要把该文件提交到 Git 仓库。
@@ -108,7 +108,7 @@ python -m PyInstaller --noconfirm --clean E6dl.spec
 ## 项目结构
 
 ```
-E6Dler/
+E621Downloader/
 ├─ gui.py            # GUI 入口与页面实现
 ├─ gui_theme.py      # Fluent Design 主题令牌、Mica 支持
 ├─ gui_widgets.py    # 自绘控件与图片加载器
