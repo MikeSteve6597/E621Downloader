@@ -85,7 +85,7 @@ class ImageLoader(QObject):
             self.manager.setCache(cache)
         except Exception:
             pass
-        self.user_agent = "E6dl/1.5 (anonymous)"
+        self.user_agent = "E621Downloader/1.5 (anonymous)"
         self._active: set[QNetworkReply] = set()
 
     def set_user_agent(self, ua: str) -> None:

@@ -82,7 +82,7 @@ from gui_widgets import (
     set_icon,
 )
 
-APP_TITLE = "E6Dler"
+APP_TITLE = "E621Downloader"
 NAV_ITEMS = [
     ("discover", "发现", "discover"),
     ("search", "搜索下载", "search"),
@@ -1904,7 +1904,7 @@ class SettingsPage(QWidget):
         about_card, about_lay = section_card()
         about_lay.addWidget(self._title("关于"))
         about = QLabel(
-            f"E6Dler {e6core.APP_VERSION} · PySide6 + Fluent Design\n"
+            f"{APP_TITLE} {e6core.APP_VERSION} · PySide6 + Fluent Design\n"
             "预览图与大图来自 e621，账号信息仅保存在本机配置文件中。"
         )
         about.setObjectName("Secondary")
@@ -2604,7 +2604,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):  # noqa: N802
         if self.search_page.is_busy():
-            if not confirm(self, "退出 E6Dler", "下载仍在进行，退出将中断当前任务。", "仍要退出", danger=True):
+            if not confirm(self, "退出 E621Downloader", "下载仍在进行，退出将中断当前任务。", "仍要退出", danger=True):
                 event.ignore()
                 return
             if self.search_page.worker is not None:
@@ -2637,7 +2637,7 @@ def install_excepthook() -> None:
         except Exception:
             pass
         try:
-            ctypes.windll.user32.MessageBoxW(0, text[-1800:], "E6Dler 发生错误", 0x10)
+            ctypes.windll.user32.MessageBoxW(0, text[-1800:], "E621Downloader 发生错误", 0x10)
         except Exception:
             pass
 

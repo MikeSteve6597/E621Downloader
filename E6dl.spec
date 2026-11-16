@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# E6Dler GUI 打包配置（PyInstaller onefile，无控制台）
+# E621Downloader GUI 打包配置（PyInstaller onefile，无控制台）
 
 block_cipher = None
 
@@ -56,7 +56,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='E6dl',
+    name='E621Downloader',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

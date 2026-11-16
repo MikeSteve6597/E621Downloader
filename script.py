@@ -307,7 +307,7 @@ def create_login_session(config: dict):
     session = requests.Session()
     session.headers.update(
         {
-            "User-Agent": f"E6dl/1.4 (by {username} on e621)",
+            "User-Agent": f"E621Downloader/1.4 (by {username} on e621)",
             "Authorization": make_auth_header(username, api_key),
             "Accept": "application/json",
         }
@@ -341,7 +341,7 @@ def download_flow(guest: bool = False) -> None:
         session = requests.Session()
         session.headers.update(
             {
-                "User-Agent": "E6dl/1.4 (anonymous)",
+                "User-Agent": "E621Downloader/1.4 (anonymous)",
                 "Accept": "application/json",
             }
         )

@@ -16,7 +16,7 @@ from typing import Callable, Iterable, Optional
 
 import requests
 
-APP_NAME = "E6Dler"
+APP_NAME = "E621Downloader"
 APP_VERSION = "1.5"
 API_ROOT = "https://e621.net"
 
@@ -183,8 +183,8 @@ def make_auth_header(username: str, api_key: str) -> str:
 
 def user_agent(username: Optional[str] = None) -> str:
     if username:
-        return f"E6dl/{APP_VERSION} (by {username} on e621)"
-    return f"E6dl/{APP_VERSION} (anonymous)"
+        return f"E621Downloader/{APP_VERSION} (by {username} on e621)"
+    return f"E621Downloader/{APP_VERSION} (anonymous)"
 
 
 def make_session(config: Optional[dict] = None, guest: bool = False) -> requests.Session:

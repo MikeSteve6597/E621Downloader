@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ==========================================
-echo   E6Dler 一键打包
+echo   E621Downloader 一键打包
 echo ==========================================
 echo.
 
@@ -18,7 +18,7 @@ python -m PyInstaller --noconfirm --clean E6dl.spec
 if errorlevel 1 goto :error
 
 echo.
-echo 打包完成：dist\E6dl.exe
+echo 打包完成：dist\E621Downloader.exe
 pause
 exit /b 0
 
