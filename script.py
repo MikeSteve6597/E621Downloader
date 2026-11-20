@@ -53,6 +53,7 @@ from e6core import (  # noqa: E402
     require_online,
     save_config,
     sync_mode_from_config,
+    user_agent,
 )
 
 CONFIG_FILE = Path.home() / "E6Dler" / "userdata.json"
@@ -307,7 +308,7 @@ def create_login_session(config: dict):
     session = requests.Session()
     session.headers.update(
         {
-            "User-Agent": f"E621Downloader/1.4 (by {username} on e621)",
+            "User-Agent": user_agent(username),
             "Authorization": make_auth_header(username, api_key),
             "Accept": "application/json",
         }
@@ -341,7 +342,7 @@ def download_flow(guest: bool = False) -> None:
         session = requests.Session()
         session.headers.update(
             {
-                "User-Agent": "E621Downloader/1.4 (anonymous)",
+                "User-Agent": user_agent(),
                 "Accept": "application/json",
             }
         )
