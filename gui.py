@@ -223,6 +223,7 @@ class DownloadWorker(QThread):
     status = Signal(str)
     page_started = Signal(int, int, int)
     item_progress = Signal(int)
+    item_failed = Signal(str, str)
     done = Signal(int, int, bool)
     failed = Signal(str)
 
@@ -315,19 +316,20 @@ class DownloadWorker(QThread):
                     continue
 
                 self.status.emit(f"正在下载 {filename}")
-                ok = e6core.download_image(
+                err = e6core.download_image(
                     self.session,
                     url,
                     target,
                     cancelled=lambda: self.cancel_event.is_set(),
                 )
-                if ok:
+                if err is None:
                     downloaded += 1
                     seen.add(md5)
                     if self.remember:
                         e6core.append_seen_md5(self.directory, md5)
                 else:
                     skipped += 1
+                    self.item_failed.emit(filename, err)
                     if self.cancel_event.is_set():
                         self.done.emit(downloaded, skipped, True)
                         return
@@ -360,10 +362,11 @@ class SingleDownloadWorker(QThread):
             if target.exists():
                 self.ok.emit(str(target))
                 return
-            if e6core.download_image(self.session, url, target):
+            err = e6core.download_image(self.session, url, target)
+            if err is None:
                 self.ok.emit(str(target))
             else:
-                self.failed.emit("下载失败，请稍后重试。")
+                self.failed.emit(f"下载失败：{err}")
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(friendly_error(exc))
 
@@ -1158,6 +1161,7 @@ class SearchPage(QWidget):
         super().__init__()
         self.main = main
         self.worker: DownloadWorker | None = None
+        self._dl_fail_count = 0
         cfg = main.config
 
         outer = QVBoxLayout(self)
@@ -1448,9 +1452,11 @@ class SearchPage(QWidget):
         self.worker = DownloadWorker(
             session, tags, blacklist, quality, pages, limit, min_score, directory, remember, self
         )
+        self._dl_fail_count = 0
         self.worker.status.connect(self.status.setText)
         self.worker.page_started.connect(self._on_page)
         self.worker.item_progress.connect(self._on_item)
+        self.worker.item_failed.connect(self._on_item_failed)
         self.worker.done.connect(self._on_done)
         self.worker.failed.connect(self._on_failed)
         self.worker.finished.connect(self.worker.deleteLater)
@@ -1464,12 +1470,17 @@ class SearchPage(QWidget):
     def _on_item(self, value: int) -> None:
         self.progress.setValue(value)
 
+    def _on_item_failed(self, filename: str, err: str) -> None:
+        self._dl_fail_count += 1
+        self.status.setText(f"下载失败：{filename}（{err}）")
+
     def _on_done(self, downloaded: int, skipped: int, cancelled: bool) -> None:
         self._finish()
+        fail_note = f"，其中 {self._dl_fail_count} 项下载失败" if self._dl_fail_count else ""
         if cancelled:
-            self.info.show_message(f"已取消，本次下载 {downloaded} 张，跳过 {skipped} 张。", "warning")
+            self.info.show_message(f"已取消，本次下载 {downloaded} 张，跳过 {skipped} 张{fail_note}。", "warning")
         else:
-            self.info.show_message(f"下载完成：成功 {downloaded} 张，跳过 {skipped} 张。", "success")
+            self.info.show_message(f"下载完成：成功 {downloaded} 张，跳过 {skipped} 张{fail_note}。", "success")
         self.status.setText(f"保存目录：{self.dir_edit.text()}")
 
     def _on_failed(self, message: str) -> None:
@@ -1589,7 +1600,7 @@ class FavoritesPage(QWidget):
         self.refresh_btn.setEnabled(False)
         session = self.main.api_session()
 
-        worker = ApiWorker(lambda: e6core.fetch_favorites(session, 200), self)
+        worker = ApiWorker(lambda: e6core.fetch_all_favorites(session, 200), self)
         self._worker = worker
         worker.ok.connect(self._on_favorites)
         worker.failed.connect(self._on_failed)
@@ -1809,10 +1820,6 @@ class SettingsPage(QWidget):
         self.theme_control.setMaximumWidth(320)
         self.theme_control.changed.connect(main.set_theme_mode)
         theme_lay.addWidget(self.theme_control)
-        self.mica_note = QLabel(f"当前材质：{theme.mica_status_text()}")
-        self.mica_note.setObjectName("Caption")
-        self.mica_note.setWordWrap(True)
-        theme_lay.addWidget(self.mica_note)
         root.addWidget(theme_card)
 
         download_card, download_lay = section_card()
@@ -1974,7 +1981,6 @@ class SettingsPage(QWidget):
             f"当前：{current}。单机模式完全禁用联网，为开发阶段默认值；"
             "在线模式允许访问 e621 接口，需手动开启。"
         )
-        self.mica_note.setText(f"当前材质：{theme.mica_status_text()}")
         self.refresh_account()
 
     def _browse(self) -> None:
@@ -2163,12 +2169,12 @@ class MainWindow(QMainWindow):
             except e6core.OfflineModeError:
                 self._anon_session = None
         self._workers: set[QThread] = set()
-        self._mica = theme.mica_supported()
         self._theme_overlay = None
         self._theme_anim = None
 
         self.setWindowTitle(APP_TITLE)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         icon_path = resource_path("icon.ico")
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
@@ -2180,7 +2186,6 @@ class MainWindow(QMainWindow):
             self.loader.set_user_agent(e6core.user_agent(self.username))
 
         self.root = RootWidget()
-        self.root.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.root.setAutoFillBackground(False)
         self.setCentralWidget(self.root)
         self.setStyleSheet("QMainWindow { background: transparent; }")
@@ -2511,8 +2516,6 @@ class MainWindow(QMainWindow):
                 page.refresh_theme()
         if self.detail is not None:
             self.detail.refresh_theme()
-        if self._mica:
-            theme.apply_mica(int(self.winId()), dark)
         if snapshot is not None and not snapshot.isNull():
             self._play_theme_overlay(snapshot)
 
@@ -2555,13 +2558,6 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.Type.WindowStateChange:
             self.titlebar.sync_max()
         super().changeEvent(event)
-
-    def showEvent(self, event):  # noqa: N802
-        super().showEvent(event)
-        if self._mica:
-            if not theme.apply_mica(int(self.winId()), theme.current().is_dark):
-                self._mica = False
-            self.root.update()
 
     def nativeEvent(self, event_type, message):  # noqa: N802
         if os.name == "nt" and bytes(event_type) in (b"windows_generic_MSG", b"windows_dispatcher_MSG"):
@@ -2616,7 +2612,7 @@ class RootWidget(QWidget):
     def paintEvent(self, _event):  # noqa: N802
         t = theme.current()
         p = QPainter(self)
-        p.fillRect(self.rect(), QColor(t.bg if theme.mica_active() else t.bg_solid))
+        p.fillRect(self.rect(), QColor(t.bg_solid))
         p.end()
 
 

@@ -1,10 +1,7 @@
-"""Fluent Design 主题令牌、全局样式与 Windows 11 材质支持。"""
+"""Fluent Design 主题令牌与全局样式。"""
 
 from __future__ import annotations
 
-import ctypes
-import os
-import sys
 from dataclasses import dataclass
 
 from PySide6.QtCore import QPointF, QRectF, Qt
@@ -23,7 +20,6 @@ from PySide6.QtWidgets import QApplication
 
 @dataclass(frozen=True)
 class Tokens:
-    bg: str
     bg_solid: str
     sidebar: str
     card: str
@@ -54,7 +50,6 @@ class Tokens:
 
 
 LIGHT = Tokens(
-    bg="#B8F9F9F9",
     bg_solid="#F3F3F3",
     sidebar="#70FFFFFF",
     card="#96FFFFFF",
@@ -84,7 +79,6 @@ LIGHT = Tokens(
 )
 
 DARK = Tokens(
-    bg="#A6202020",
     bg_solid="#202020",
     sidebar="#0AFFFFFF",
     card="#10FFFFFF",
@@ -464,167 +458,6 @@ def apply_theme(app: QApplication, dark: bool) -> Tokens:
     app.setPalette(_palette(t))
     app.setStyleSheet(build_qss(t))
     return t
-
-
-# --------------------------------------------------------------------------- #
-# Windows 11 Mica
-# --------------------------------------------------------------------------- #
-
-DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-DWMWA_WINDOW_CORNER_PREFERENCE = 33
-DWMWA_SYSTEMBACKDROP_TYPE = 38
-DWMWA_MICA_EFFECT = 1029
-DWMSBT_MAINWINDOW = 2
-DWMWCP_ROUND = 2
-
-
-class _MARGINS(ctypes.Structure):
-    _fields_ = [
-        ("cxLeftWidth", ctypes.c_int),
-        ("cxRightWidth", ctypes.c_int),
-        ("cyTopHeight", ctypes.c_int),
-        ("cyBottomHeight", ctypes.c_int),
-    ]
-
-
-class _RTL_OSVERSIONINFOW(ctypes.Structure):
-    _fields_ = [
-        ("dwOSVersionInfoSize", ctypes.c_ulong),
-        ("dwMajorVersion", ctypes.c_ulong),
-        ("dwMinorVersion", ctypes.c_ulong),
-        ("dwBuildNumber", ctypes.c_ulong),
-        ("dwPlatformId", ctypes.c_ulong),
-        ("szCSDVersion", ctypes.c_wchar * 128),
-    ]
-
-
-def os_version() -> tuple[int, int, int]:
-    """返回真实系统版本 (主版本, 次版本, 构建号)，不受兼容性清单影响。"""
-    try:
-        info = _RTL_OSVERSIONINFOW()
-        info.dwOSVersionInfoSize = ctypes.sizeof(info)
-        if ctypes.windll.ntdll.RtlGetVersion(ctypes.byref(info)) == 0:
-            return int(info.dwMajorVersion), int(info.dwMinorVersion), int(info.dwBuildNumber)
-    except Exception:
-        pass
-    try:
-        version = sys.getwindowsversion()
-        return int(version.major), int(version.minor), int(version.build)
-    except Exception:
-        return 0, 0, 0
-
-
-def windows_build() -> int:
-    """使用 RtlGetVersion 获取真实系统构建号。"""
-    return os_version()[2]
-
-
-def mica_supported() -> bool:
-    if os.name != "nt" or os.environ.get("E6DL_NO_MICA") == "1":
-        return False
-    # Windows 11 从 10.0.22000 开始支持云母材质（22621 起支持公开的系统背景类型）
-    major, minor, build = os_version()
-    return (major, minor, build) >= (10, 0, 22000)
-
-
-_MICA_ACTIVE = False
-
-
-def mica_active() -> bool:
-    return _MICA_ACTIVE
-
-
-def _set_attr(hwnd: int, attr: int, value: int) -> bool:
-    try:
-        data = ctypes.c_int(value)
-        res = ctypes.windll.dwmapi.DwmSetWindowAttribute(
-            hwnd, attr, ctypes.byref(data), ctypes.sizeof(data)
-        )
-        return res == 0
-    except Exception:
-        return False
-
-
-ACCENT_ENABLE_HOSTBACKDROP = 5
-WCA_ACCENT_POLICY = 19
-
-
-class _ACCENTPOLICY(ctypes.Structure):
-    _fields_ = [
-        ("AccentState", ctypes.c_int),
-        ("AccentFlags", ctypes.c_int),
-        ("GradientColor", ctypes.c_uint),
-        ("AnimationId", ctypes.c_int),
-    ]
-
-
-class _WINCOMPATTRDATA(ctypes.Structure):
-    _fields_ = [
-        ("Attribute", ctypes.c_int),
-        ("Data", ctypes.c_void_p),
-        ("SizeOfData", ctypes.c_size_t),
-    ]
-
-
-def _set_composition_backdrop(hwnd: int, dark: bool) -> bool:
-    """SetWindowCompositionAttribute + ACCENT_ENABLE_HOSTBACKDROP（早期 Win11 兜底）。"""
-    try:
-        accent = _ACCENTPOLICY()
-        accent.AccentState = ACCENT_ENABLE_HOSTBACKDROP
-        accent.AccentFlags = 2
-        accent.GradientColor = 0x99202020 if dark else 0x99F3F3F3
-        accent.AnimationId = 0
-        data = _WINCOMPATTRDATA()
-        data.Attribute = WCA_ACCENT_POLICY
-        data.Data = ctypes.cast(ctypes.pointer(accent), ctypes.c_void_p)
-        data.SizeOfData = ctypes.sizeof(accent)
-        res = ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.byref(data))
-        return bool(res)
-    except Exception:
-        return False
-
-
-def extend_frame(hwnd: int) -> bool:
-    """把客户区扩展到整个窗口，让桌面背景参与合成（云母可见的前提）。"""
-    try:
-        margins = _MARGINS(0, 0, 0, 0)
-        res = ctypes.windll.dwmapi.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
-        return res == 0
-    except Exception:
-        return False
-
-
-def apply_mica(hwnd: int, dark: bool) -> bool:
-    global _MICA_ACTIVE
-    if not mica_supported():
-        _MICA_ACTIVE = False
-        return False
-    _set_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, 1 if dark else 0)
-    _set_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
-    # 首选：公开的系统背景类型接口
-    backdrop = _set_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_MAINWINDOW)
-    if not backdrop:
-        # 兜底一：Windows 11 21H2 未公开的 Mica 开关
-        backdrop = _set_attr(hwnd, DWMWA_MICA_EFFECT, 1)
-    composition = False
-    if not backdrop:
-        # 兜底二：SetWindowCompositionAttribute 宿主背景
-        composition = _set_composition_backdrop(hwnd, dark)
-    extend_frame(hwnd)
-    _MICA_ACTIVE = bool(backdrop or composition)
-    return _MICA_ACTIVE
-
-
-def mica_status_text() -> str:
-    if _MICA_ACTIVE:
-        return "云母材质已启用"
-    if not mica_supported():
-        return "纯色背景（系统不支持）"
-    return "纯色背景（调用失败）"
-
-
-def set_dark_titlebar(hwnd: int, dark: bool) -> None:
-    _set_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, 1 if dark else 0)
 
 
 # --------------------------------------------------------------------------- #

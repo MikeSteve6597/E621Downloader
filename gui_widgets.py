@@ -85,7 +85,7 @@ class ImageLoader(QObject):
             self.manager.setCache(cache)
         except Exception:
             pass
-        self.user_agent = "E621Downloader/1.5 (anonymous)"
+        self.user_agent = e6core.user_agent()
         self._active: set[QNetworkReply] = set()
 
     def set_user_agent(self, ua: str) -> None:
@@ -768,10 +768,12 @@ class ToggleSwitch(QWidget):
 class InfoBar(QFrame):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        self.setObjectName("InfoBar")
         self.setVisible(False)
         self._kind = "info"
         self._text = QLabel()
         self._text.setWordWrap(True)
+        self._text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self._icon = QLabel()
         self._icon.setFixedSize(18, 18)
         self._close = QPushButton()
@@ -783,9 +785,9 @@ class InfoBar(QFrame):
         lay = QHBoxLayout(self)
         lay.setContentsMargins(12, 8, 8, 8)
         lay.setSpacing(10)
-        lay.addWidget(self._icon, 0, Qt.AlignmentFlag.AlignTop)
+        lay.addWidget(self._icon, 0, Qt.AlignmentFlag.AlignVCenter)
         lay.addWidget(self._text, 1)
-        lay.addWidget(self._close, 0, Qt.AlignmentFlag.AlignTop)
+        lay.addWidget(self._close, 0, Qt.AlignmentFlag.AlignVCenter)
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self.hide)
@@ -807,7 +809,7 @@ class InfoBar(QFrame):
         color = colors.get(self._kind, t.accent)
         self._icon.setPixmap(make_icon(self._kind if self._kind != "info" else "info", color, 16).pixmap(16, 16))
         self.setStyleSheet(
-            f"QFrame {{ background: {t.card}; border: 1px solid {t.stroke}; border-left: 3px solid {color}; border-radius: 6px; }}"
+            f"#InfoBar {{ background: {t.card}; border: 1px solid {t.stroke}; border-left: 3px solid {color}; border-radius: 6px; }}"
         )
 
     def show_message(self, text: str, kind: str = "info", timeout: int = 6000) -> None:

@@ -17,7 +17,7 @@ from typing import Callable, Iterable, Optional
 import requests
 
 APP_NAME = "E621Downloader"
-APP_VERSION = "1.5"
+APP_VERSION = "1.5.1"
 API_ROOT = "https://e621.net"
 
 DOWNLOAD_DIR = Path.home() / "Downloads" / "E6dl"
@@ -290,14 +290,43 @@ def fetch_post(session: requests.Session, post_id: int) -> Optional[dict]:
     return resp.json().get("post")
 
 
-def fetch_favorites(session: requests.Session, limit: int = 100) -> list[dict]:
+def fetch_favorites(session: requests.Session, limit: int = 100, page: int = 1) -> list[dict]:
     require_online()
     resp = session.get(
-        f"{API_ROOT}/favorites.json", params={"limit": limit}, timeout=REQUEST_TIMEOUT
+        f"{API_ROOT}/favorites.json",
+        params={"limit": limit, "page": page},
+        timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
     data = resp.json()
     return data.get("posts", data.get("favorites", []))
+
+
+def fetch_all_favorites(
+    session: requests.Session,
+    limit: int = 200,
+    max_pages: int = 25,
+    delay: float = DELAY_BETWEEN_REQUESTS,
+) -> list[dict]:
+    """逐页拉取收藏，直到空页或不足一页；按作品 id 去重并合并。"""
+    require_online()
+    posts: list[dict] = []
+    seen_ids: set[int] = set()
+    for page in range(1, max_pages + 1):
+        batch = fetch_favorites(session, limit=limit, page=page)
+        if not batch:
+            break
+        for post in batch:
+            pid = int(post.get("id", 0) or 0)
+            if pid and pid in seen_ids:
+                continue
+            seen_ids.add(pid)
+            posts.append(post)
+        if len(batch) < limit:
+            break
+        if page < max_pages:
+            time.sleep(delay)
+    return posts
 
 
 def add_favorite(session: requests.Session, post_id: int) -> bool:
@@ -320,20 +349,25 @@ def download_image(
     save_path: Path,
     on_progress: Optional[Callable[[int, int], None]] = None,
     cancelled: Optional[Callable[[], bool]] = None,
-) -> bool:
+) -> Optional[str]:
+    """下载到 save_path。
+
+    成功返回 None；取消返回 ``"已取消"``；其余失败返回可读的错误说明字符串。
+    失败时不会残留 ``.part`` 临时文件。
+    """
     require_online()
+    tmp = save_path.with_suffix(save_path.suffix + ".part")
     try:
         with session.get(url, stream=True, timeout=30) as resp:
             resp.raise_for_status()
             total = int(resp.headers.get("Content-Length") or 0)
             done = 0
-            tmp = save_path.with_suffix(save_path.suffix + ".part")
             with open(tmp, "wb") as f:
                 for chunk in resp.iter_content(64 * 1024):
                     if cancelled and cancelled():
                         f.close()
                         tmp.unlink(missing_ok=True)
-                        return False
+                        return "已取消"
                     if not chunk:
                         continue
                     f.write(chunk)
@@ -341,10 +375,15 @@ def download_image(
                     if on_progress:
                         on_progress(done, total)
             tmp.replace(save_path)
-        return True
+        return None
     except Exception as exc:  # noqa: BLE001
-        print(f"\n  [下载失败] {exc}")
-        return False
+        try:
+            tmp.unlink(missing_ok=True)
+        except Exception:
+            pass
+        if isinstance(exc, requests.HTTPError) and exc.response is not None:
+            return f"HTTP {exc.response.status_code}"
+        return str(exc) or type(exc).__name__
 
 
 def guess_ext(post: dict) -> str:

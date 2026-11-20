@@ -5,7 +5,7 @@
 <p align="center">
   e621 图片浏览与批量下载工具 · Windows Fluent Design 桌面客户端
   <br>
-  <strong>版本 1.5</strong>
+  <strong>版本 1.5.1</strong>
 </p>
 
 > [!WARNING]
@@ -13,7 +13,7 @@
 
 ## 简介
 
-E621Downloader 是一个基于 Python + PySide6 构建的 Windows 桌面客户端，用于浏览 e621 作品、按标签批量搜索下载，并管理收藏与黑名单。界面遵循 Windows 11 Fluent Design 设计语言，支持 Mica 云母材质、深色/浅色主题与高 DPI 缩放。
+E621Downloader 是一个基于 Python + PySide6 构建的 Windows 桌面客户端，用于浏览 e621 作品、按标签批量搜索下载，并管理收藏与黑名单。界面遵循 Windows 11 Fluent Design 设计语言，支持深色/浅色主题与高 DPI 缩放。
 
 程序以**单文件 exe** 形式发布，目标电脑无需安装 Python 或任何运行库，复制后双击即可启动。
 
@@ -40,7 +40,7 @@ E621Downloader 是一个基于 Python + PySide6 构建的 Windows 桌面客户�
 
 **本地数据与外观**
 - 搜索历史与最近关键词（可配置保留条数）
-- 深色 / 浅色 / 跟随系统主题，Windows 11 Mica 材质
+- 深色 / 浅色 / 跟随系统主题
 - 一键清空搜索历史、清空图片缓存、打开配置目录
 - 单机 / 在线模式开关，默认单机模式，所有联网请求受统一门禁控制
 
@@ -48,7 +48,7 @@ E621Downloader 是一个基于 Python + PySide6 构建的 Windows 桌面客户�
 
 | 项目 | 要求 |
 | --- | --- |
-| 操作系统 | Windows 10 / Windows 11 64 位（Windows 11 下启用 Mica 材质） |
+| 操作系统 | Windows 10 / Windows 11 64 位 |
 | 运行环境 | 无需安装 Python，单文件 exe 直接运行 |
 | 网络 | 在线模式需要访问 `e621.net` |
 | 账号 | 登录与收藏功能需要 e621 账号及 API Key |
@@ -112,7 +112,7 @@ python -m PyInstaller --noconfirm --clean E6dl.spec
 ```
 E621Downloader/
 ├─ gui.py            # GUI 入口与页面实现
-├─ gui_theme.py      # Fluent Design 主题令牌、Mica 支持
+├─ gui_theme.py      # Fluent Design 主题令牌与样式
 ├─ gui_widgets.py    # 自绘控件与图片加载器
 ├─ e6core.py         # e621 API、配置、下载核心
 ├─ script.py         # 命令行版本
@@ -136,9 +136,6 @@ e621 对请求频率有限制，请稍后重试。程序在翻页之间内置了
 
 **下载目录中没有文件？**
 请确认下载目录可写，且搜索条件（最低评分、黑名单）没有过滤掉所有结果。
-
-**Windows 10 上没有 Mica 效果？**
-Mica 是 Windows 11 的系统特性，Windows 10 下会自动回退为纯色背景，其余功能不受影响。
 
 **旧版本下载的文件会被重复下载吗？**
 不会。程序会读取下载目录中的 `downloaded_md5.txt` 并按 MD5 去重。
